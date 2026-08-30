@@ -61,7 +61,7 @@ export const skills = [
     icon: 'code',
     items: [
       { name: 'Java',       level: 100 },
-      { name: 'JavaScript (ES6+)', level: 78 },
+      { name: 'JavaScript (ES6+)', level: 90 },
       { name: 'Python',      level: 60 },
       { name: 'Gdscript',       level: 57 },
       { name: 'C',          level: 70 },
@@ -76,7 +76,8 @@ export const skills = [
       { name: 'Tailwind CSS', level: 75 },
       { name: 'Node.js',      level: 68 },
       { name: 'Express.js',      level: 68 },
-      { name: 'Spring Boot',      level: 68 },
+      { name: 'Spring Boot',      level: 89 },
+      { name: 'FastAPI',      level: 35 },
     ],
   },
   {
@@ -87,13 +88,25 @@ export const skills = [
       { name: 'VS Code',      level: 90 },
       { name: 'Postman',      level: 89 },
       { name: 'Figma',        level: 60 },
-      { name: 'Webpack',      level: 55 },
-      { name: 'Claude',      level: 78 },
-      { name: 'OpenAI',      level: 50 },
-      { name: 'AgenticAI',      level: 45 },
-      { name: 'Jira',      level: 75 },
       { name: 'Maven',      level: 100 },
       { name: 'Gradle',      level: 100 },
+      { name: 'Kiro',      level: 90 },
+      { name: 'Kali linux',      level: 90 },
+    ],
+  },
+  {
+    group: 'AI Tools',
+    icon: 'game',
+    items: [
+      { name: 'Claude', level: 75 },
+      { name: 'OpenAI', level: 85 },
+      { name: 'AgenticAI', level: 35 },
+      { name: 'ChatGPT', level: 50 },
+      { name: 'Codex', level: 50 },
+      { name: 'Copilot', level: 50 },
+      { name: 'Antigravity', level: 60 },
+      { name: 'Gemini', level: 50 },
+      { name: 'Deepseek', level: 50 },
     ],
   },
   {
@@ -113,6 +126,7 @@ export const skills = [
       { name: 'Logical reasoning', level: 90 },
       { name: 'Data structures',   level: 54 },
       { name: 'Problem solving',   level: 88 },
+      { name: 'Calculus',   level: 88 },
     ],
   },
 ];
@@ -122,29 +136,46 @@ export const skills = [
 --------------------------------------------------------------------------- */
 export const projects = [
   {
-    title: 'Personal Portfolio Website',
+    title: 'Math-Worm-Game',
     year: '2025',
-    kind: 'Front-End',
-    blurb: `A responsive portfolio built with HTML, CSS and JavaScript to present my
-            skills, projects and experience. Fully responsive across desktop and mobile,
-            with a workflow driven by GitHub for version control — commits from GitHub
-            Desktop on my laptop, plus quick fixes straight from my phone.`,
-    tech: ['HTML5', 'CSS3', 'JavaScript', 'Git', 'GitHub Pages'],
+    kind: 'Game Dev.',
+    blurb: `Develop and Design a Scientific Calculator.`,
+    tech: ['Gdscript'],
     link: '',
-    repo: 'https://github.com/AndrewSanAntonio1',
+    repo: '',
     accent: 'mint',
   },
   {
-    title: 'Interactive Data Dashboard',
-    year: '2025',
-    kind: 'Data Visualisation',
-    blurb: `An interactive dashboard built with JavaScript and Chart.js delivering
-            real-time data visualisation. Dynamic charts and graphs let users read
-            trends quickly, with a layout that stays legible as datasets grow.`,
-    tech: ['JavaScript', 'Chart.js', 'REST APIs', 'CSS Grid'],
+    title: 'Full Stack Task Flow System',
+    year: '2026',
+    kind: 'Personal Project',
+    blurb: `Developed a full-stack TaskFlow Management System using React, Spring Boot,
+            and MySQL.
+             Implemented user management, task creation and tracking, and CRUD
+            functionalities through RESTful APIs.
+             Designed and integrated a relational database using Spring Data JPA and MySQL,
+            enabling efficient task organization and status monitoring.
+             Collaborated with frontend-backend integration to deliver a responsive and
+            user-friendly task management application.`,
+    tech: ['React', 'Spring Boot', 'Git', 'Postman', 'MySQL'],
     link: '',
-    repo: '',
+    repo: 'https://github.com/AndrewSanAntonio1/Crud-App',
     accent: 'violet',
+  },
+  {
+    title: 'LibraryManagementSystem',
+    year: '2026',
+    kind: 'Personal Project',
+    blurb: `Built a personal Library Management System using Java 25, Spring Boot, Spring
+          Security, JWT, Spring Data JPA, MySQL, MapStruct, and Gradle.
+           Applied SOLID principles, including Single Responsibility (SRP), Open/Closed
+          (OCP), and Dependency Inversion (DIP), while implementing layered architecture,
+          RESTful APIs, authentication, role-based authorization, and CRUD operations.`,
+    tech: ['React', 'Spring Boot', 'Three.js', 'GSAP', 'Claude', 'Git', 'MySQL','Postman'
+    ],
+    link: '',
+    repo: 'https://github.com/AndrewSanAntonio1/Library-Management-System-Backend',
+    accent: 'blue',
   },
 ];
 
@@ -153,8 +184,8 @@ export const projects = [
 --------------------------------------------------------------------------- */
 export const works = [
   {
-    period: 'Present',
-    title: 'Computer Science Student',
+    period: '2025 - 2029',
+    title: 'BSIT',
     org: 'Jose Rizal University',
     detail: `Studying software development with an emphasis on Java, data structures and
              the mathematics behind them. Consistently drawn to the problems that need a
@@ -162,30 +193,27 @@ export const works = [
     tags: ['Java', 'Data Structures', 'Mathematics'],
   },
   {
-    period: '2025',
-    title: 'Back-End Practice — Java',
-    org: 'Self-directed',
-    detail: `Building small services and console applications in Java to internalise OOP,
-             collections and clean layering. Focus on writing code that a future me can
-             still read.`,
-    tags: ['Java', 'OOP', 'Algorithms'],
+    period: 'July 2026 - Present',
+    title: 'QA Intern',
+    org: 'C8nnect IT Solution',
+    detail: `- Performed manual QA testing for HRIS web applications in LGU by executing test
+          cases, reporting defects, verifying bug fixes, validating functionality and UI, and
+          collaborating with developers to ensure software quality and reliability.
+          - Reviewed and tested with guidance from Christian Vergara (Senior Software
+          Developer).
+          - Fixed and resolved bugs in the PNP Admin and Staff modules by identifying root causes,
+          implementing fixes, and testing affected functionalities to ensure system reliability.
+          - Reviewed and tested with guidance from Chrismar Ilustrisimo (Senior Software
+          Developer)
+`,
+    tags: ['Jira', 'Excel', 'Github', 'Spring Boot', 'Frontend'],
   },
   {
-    period: '2025',
-    title: 'Front-End Foundations',
-    org: 'Self-directed',
-    detail: `Moved from static pages to component thinking — semantic HTML, modern CSS
-             layout, and JavaScript that stays out of its own way. This site is part of
-             that work.`,
-    tags: ['JavaScript', 'CSS', 'Responsive Design'],
-  },
-  {
-    period: '2024',
-    title: 'Version Control Workflow',
-    org: 'GitHub',
-    detail: `Adopted Git properly: branches, meaningful commits, and a deploy pipeline
-             through GitHub Pages that I can drive from a laptop or a phone.`,
-    tags: ['Git', 'GitHub', 'CI/CD'],
+    period: 'August 2026 - Present',
+    title: 'FullStack Developer',
+    org: 'JuanaBin PH',
+    detail: `Contributed to the development of JuanaBin PH, a smart waste management initiative focused on promoting proper waste segregation and sustainable community practices. The project combines technology, user engagement, and reward mechanisms to encourage responsible waste disposal.`,
+    tags: ['System Development', 'API Integration', 'Database Management', 'Software Engineering'],
   },
 ];
 
@@ -197,12 +225,16 @@ export const works = [
    so the gallery never looks broken while you gather photos.
 --------------------------------------------------------------------------- */
 export const gallery = [
-  { src: '', title: 'Workspace',        caption: 'Where the compiling happens',      span: 'wide' },
-  { src: '', title: 'Whiteboard Math',  caption: 'Proof before code',                span: 'tall' },
-  { src: '', title: 'Dashboard Build',  caption: 'Chart.js in progress',             span: '' },
-  { src: '', title: 'Campus',           caption: 'Jose Rizal University',            span: '' },
-  { src: '', title: 'Late Commits',     caption: 'Shipping from the phone',          span: '' },
-  { src: '', title: 'First Deploy',     caption: 'GitHub Pages going live',          span: 'wide' },
+  { src: 'assets/img/img1.png', title: 'Mirrorshots', caption: 'New Laptop', span: 'wide' },
+  { src: 'assets/img/img2.jpg', title: 'Dance Presentation', caption: 'Memories in ABM', span: 'tall' },
+  { src: 'assets/img/img3.png', title: 'Church', caption: 'Challenges and Activities', span: '' },
+  { src: 'assets/img/img4.png', title: 'Chess Sparring', caption: 'Chess Sparring with chinese friends', span: '' },
+  { src: 'assets/img/img5.jpg', title: 'Milo Chess Tournament', caption: 'Champion', span: '' },
+  { src: 'assets/img/img6.jpg', title: 'NCAA Season 100', caption: 'The moment when got 2nd runner up my team.', span: 'wide' },
+  { src: 'assets/img/img7.jpg', title: 'My Picture', caption: 'Mirror shot HAHAHA', span: '' },
+  { src: 'assets/img/img8.jpg', title: 'Chess Team Picture', caption: 'Chess tournament in nueva ecija.', span: '' },
+  { src: 'assets/img/img9.jpg', title: 'Field trip', caption: 'Paint', span: 'wide' },
+  { src: 'assets/img/img10.jpg', title: 'Chess games', caption: 'Kunwari nag iisip HAHHAHA', span: '' },
 ];
 
 /* --- FEEDBACK -------------------------------------------------------------
@@ -222,8 +254,7 @@ export const knowledge = [
   {
     id: 'identity',
     keywords: ['who', 'who are you', 'about', 'yourself', 'introduce', 'name', 'andrew', 'bio'],
-    answer: `I'm **Andrew Jr. F. San Antonio** — a Java developer and Computer Science
-             student at Jose Rizal University. I specialise in back-end development and
+    answer: `I'm **Andrew Jr. F. San Antonio** — a Java developer and BSIT at Jose Rizal University. I specialise in back-end development and
              I'm building out my web development side. My real edge is mathematics and
              logical reasoning: I like problems that need to be *understood* before
              they're coded.`,
@@ -232,11 +263,12 @@ export const knowledge = [
   {
     id: 'skills',
     keywords: ['skill', 'skills', 'tech', 'stack', 'language', 'languages', 'know', 'good at', 'expertise', 'technolog'],
-    answer: `**Languages:** Java (strongest), JavaScript ES6+, HTML5, CSS3, C.
-             **Frameworks:** React, Next.js, Tailwind CSS, Node.js.
-             **Tools:** Git & GitHub, VS Code, Postman, Figma, Webpack.
-             Underneath all of it: mathematics, data structures and logical reasoning —
-             which is honestly the part I'd want you to judge me on.`,
+    answer: `**Languages:** Java (strongest), JavaScript (ES6+), C, Python, GDScript.
+             **Frameworks and Libraries:** Spring Boot, React, Next.js, Node.js, Express.js, Tailwind CSS, FastAPI.
+             **Tools and Platforms:** Git & GitHub, VS Code, Postman, Maven, Gradle, Figma, Kiro, Kali Linux.
+             **AI Tools:** OpenAI, Claude, ChatGPT, GitHub Copilot, Codex, Gemini, DeepSeek, Agentic AI, Antigravity.
+             **Game Development:** Roblox Studio, Blender, Godot.
+            Underneath all of it: mathematics, calculus, data structures, logical reasoning, and problem solving — the foundations I rely on to understand systems, debug effectively, and build solutions rather than simply write code  .`,
     chips: ['Which is your strongest language?', 'Show me your projects'],
   },
   {
@@ -252,11 +284,9 @@ export const knowledge = [
     id: 'projects',
     keywords: ['project', 'projects', 'built', 'build', 'portfolio', 'work on', 'made', 'created', 'dashboard'],
     answer: `Two shipped so far:
-             **1. Personal Portfolio Website** — HTML, CSS and JavaScript, fully
-             responsive, versioned through GitHub and deployed on GitHub Pages.
-             **2. Interactive Data Dashboard** — JavaScript + Chart.js with real-time,
-             dynamic charts for reading trends quickly.
-             Scroll to the **Projects** section for the full breakdown.`,
+             **1. Math Worm Game** —A GDScript-based game project focused on designing an interactive mathematics experience and implementing gameplay mechanics through Godot.
+             **2. Full Stack Task Flow System** — A full-stack task management application built with React, Spring Boot, and MySQL, featuring RESTful APIs, user management, task tracking, CRUD operations, and Spring Data JPA integration.
+             **3. Library Management System** A full-stack library management system built with Java 25, Spring Boot, Spring Security, JWT, Spring Data JPA, MySQL, MapStruct, and Gradle, applying SOLID principles, layered architecture, RESTful APIs, authentication, role-based authorization, and CRUD operations.`,
     chips: ['Tell me about the dashboard', 'What tools do you use?'],
   },
   {
@@ -271,7 +301,7 @@ export const knowledge = [
   {
     id: 'education',
     keywords: ['school', 'study', 'studying', 'university', 'college', 'education', 'jru', 'rizal', 'student', 'degree'],
-    answer: `I study Computer Science at **Jose Rizal University**. The coursework I care
+    answer: `I study BSIT at **Jose Rizal University**. The coursework I care
              most about is the mathematical side — data structures, algorithms and the
              reasoning that makes them provable rather than lucky.`,
     chips: ['What are you learning now?', 'How can I contact you?'],
@@ -305,7 +335,7 @@ export const knowledge = [
   {
     id: 'contact',
     keywords: ['contact', 'email', 'reach', 'linkedin', 'github', 'message', 'get in touch', 'hire me', 'connect'],
-    answer: `Email me at **drewsanantonio06@gmail.com** — that's the surest way to reach
+    answer: `Email me at **sgandrew290@gmail.com** — that's the surest way to reach
              me. You'll also find my LinkedIn and GitHub links in the **Contact**
              section, and the form there sends straight to my inbox.`,
     chips: ['Are you available for work?', 'Who are you?'],
