@@ -7,19 +7,18 @@ no framework, no build step. Deploys to GitHub Pages as-is.
 
 **You only ever need to edit one file: [`assets/js/data.js`](assets/js/data.js).**
 
-Everything on the page — hero, about, skills, projects, works, gallery,
-feedback and the AI chat's answers — is read from there. Keep the quotes,
-commas and brackets intact and it is safe to edit from your phone.
+Everything on the page — hero, about, skills, projects, works, gallery and the
+AI chat's answers — is read from there. Keep the quotes, commas and brackets
+intact and it is safe to edit from your phone.
 
 | Want to change… | Edit this export in `data.js` |
 |---|---|
 | Name, roles, tagline, email, links | `profile` |
 | About paragraphs and the stat row | `about` |
-| Skill groups and levels (0–100) | `skills` |
+| Skill groups and their skills | `skills` |
 | Project cards | `projects` |
-| Timeline entries | `works` |
+| Works entries | `works` |
 | Gallery tiles | `gallery` |
-| Featured quotes | `testimonials` |
 | What the AI chat knows | `knowledge` |
 | Chat's starter buttons | `chatStarters` |
 
@@ -70,11 +69,13 @@ To put a real LLM behind it later, set `REMOTE_ENDPOINT` at the top of
 fallback if the request fails. **Never put an API key in these files** — they are
 public. The key belongs in the serverless function's environment.
 
-## Feedback section
+## Browsing Skills, Projects, Works and Gallery
 
-Notes left through the form are stored in the visitor's own browser
-(`localStorage`) — they are not shared or sent anywhere. To feature a quote
-permanently for everyone, add it to `testimonials` in `data.js`.
+All four sections share one interaction: **hover** (or focus, or tap on touch) to
+reveal the summary on the card, then **click** to open the full details in a
+single dialog. Skills chips open their whole family; Projects, Works and Gallery
+shots step through with the Previous/Next buttons or the ← → arrow keys. Escape
+or the ✕ closes.
 
 ## Notes on behaviour
 

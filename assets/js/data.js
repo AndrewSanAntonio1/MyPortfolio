@@ -179,8 +179,9 @@ export const projects = [
   },
 ];
 
-/* --- WORKS / TIMELINE ------------------------------------------------------
+/* --- WORKS -----------------------------------------------------------------
    "Works" = the road so far: study, milestones, practice, experience.
+   Rendered newest-first as tiles, each one keeping its period as the label.
 --------------------------------------------------------------------------- */
 export const works = [
   {
@@ -236,14 +237,6 @@ export const gallery = [
   { src: 'assets/img/img9.jpg', title: 'Field trip', caption: 'Paint', span: 'wide' },
   { src: 'assets/img/img10.jpg', title: 'Chess games', caption: 'Kunwari nag iisip HAHHAHA', span: '' },
 ];
-
-/* --- FEEDBACK -------------------------------------------------------------
-   Starts empty on purpose — nothing here is invented.
-   Real messages left through the form appear automatically.
-   To feature a quote permanently, add it here:
-     { name: 'Ada Lovelace', role: 'Professor, JRU', quote: '…', rating: 5 }
---------------------------------------------------------------------------- */
-export const testimonials = [];
 
 /* --- AI CHAT KNOWLEDGE BASE ----------------------------------------------
    Powers the "Ask about me" assistant with zero server and zero API key.

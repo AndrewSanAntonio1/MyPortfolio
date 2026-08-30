@@ -173,7 +173,7 @@
         <h2 class="sec-head__title">Skills</h2>
         <i class="sec-head__rule" aria-hidden="true"></i>
       </header>
-      <p class="sec-lead reveal">Honest levels, not inflated bars — judge me on the foundations.</p>
+      <p class="sec-lead reveal">The stack I actually reach for. Hover a card, then click it to see the whole family.</p>
       <div class="skills" id="skillsGrid"></div>
     </div>
   </section>
@@ -186,7 +186,8 @@
         <h2 class="sec-head__title">Projects</h2>
         <i class="sec-head__rule" aria-hidden="true"></i>
       </header>
-      <div class="projects" id="projectsGrid"></div>
+      <p class="sec-lead reveal">Hover a tile for the summary &mdash; click it for the full write-up, stack and links.</p>
+      <ul class="gcards gcards--project" id="projectsGrid"></ul>
     </div>
   </section>
 
@@ -198,8 +199,8 @@
         <h2 class="sec-head__title">Works</h2>
         <i class="sec-head__rule" aria-hidden="true"></i>
       </header>
-      <p class="sec-lead reveal">The road so far — study, practice and milestones.</p>
-      <ol class="timeline" id="timeline"></ol>
+      <p class="sec-lead reveal">The road so far, newest first. Hover for the gist &mdash; click for everything.</p>
+      <ol class="gcards gcards--work" id="worksGrid"></ol>
     </div>
   </section>
 
@@ -211,7 +212,7 @@
         <h2 class="sec-head__title">Gallery</h2>
         <i class="sec-head__rule" aria-hidden="true"></i>
       </header>
-      <p class="sec-lead reveal">Snapshots of the process. Drop photos into <code>assets/img/</code> and set the path in <code>data.js</code>.</p>
+      <p class="sec-lead reveal">Chess boards, classrooms and the odd mirror shot. Hover for the caption &mdash; click to open it full size.</p>
       <div class="gallery" id="galleryGrid"></div>
     </div>
   </section>
@@ -294,13 +295,34 @@
   </form>
 </section>
 
-<!-- Gallery lightbox -->
-<div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="Image viewer">
-  <button class="lightbox__close" id="lightboxClose" aria-label="Close"><svg><use href="#i-close"/></svg></button>
-  <figure class="lightbox__fig">
-    <div class="lightbox__media" id="lightboxMedia"></div>
-    <figcaption id="lightboxCap"></figcaption>
-  </figure>
+<!-- ══════════════════════════════════════════════════════════════════════
+     DETAIL DIALOG — one viewer for every browsable section.
+     Skills, Projects, Works and Gallery all fill this same shell, so there is
+     a single focus trap, a single Escape path and a single set of styles.
+     ══════════════════════════════════════════════════════════════════ -->
+<div class="detail" id="detail" aria-hidden="true">
+  <div class="detail__scrim" data-close></div>
+  <!-- Outside the panel on purpose: the panel scrolls, and a close button that
+       scrolls away is a trap. -->
+  <button class="detail__close" id="detailClose" aria-label="Close details"><svg><use href="#i-close"/></svg></button>
+
+  <div class="detail__panel glass" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="detail__media" id="detailMedia" hidden></div>
+    <p class="detail__eyebrow" id="detailEyebrow"></p>
+    <h3 class="detail__title" id="detailTitle"></h3>
+    <p class="detail__sub" id="detailSub"></p>
+    <div class="detail__text" id="detailText"></div>
+    <div class="chips" id="detailTags"></div>
+    <div class="detail__links" id="detailLinks"></div>
+    <div class="detail__steps" id="detailSteps" hidden>
+      <button class="detail__step" id="detailPrev" type="button">
+        <svg><use href="#i-arrow"/></svg> Previous
+      </button>
+      <button class="detail__step" id="detailNext" type="button">
+        Next <svg><use href="#i-arrow"/></svg>
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- Opened straight from the filesystem? ES modules are blocked over file://,

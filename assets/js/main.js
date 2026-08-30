@@ -9,6 +9,7 @@
 
 import { initUI, onScrollProgress } from './ui.js';
 import { initChat } from './chat.js';
+import { initParticles } from './particles.js';
 
 const bar = document.getElementById('loaderBar');
 const pct = document.getElementById('loaderPct');
@@ -32,6 +33,10 @@ function finish() {
 
 async function boot() {
   progress(18);
+
+  // Initialize particles first
+  initParticles();
+  progress(25);
 
   const chat = initChat();
   progress(34);

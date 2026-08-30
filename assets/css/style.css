@@ -3,14 +3,13 @@
    You should rarely need to touch this. Content lives in assets/js/data.js.
 
    Contents
-     01 Tokens            07 Skills
-     02 Reset & base      08 Projects
-     03 Loader            09 Works / timeline
-     04 Nav & rails       10 Gallery + lightbox
-     05 Buttons/forms     11 Feedback
-     06 Hero              12 Contact / footer
-                          13 AI chat
-                          14 Responsive & reduced motion
+     01 Tokens            08 Gallery cards (Projects + Works)
+     02 Reset & base      09 Works
+     03 Loader            10 Gallery
+     04 Nav & rails       11 Detail dialog
+     05 Buttons/forms     12 Contact / footer
+     06 Hero              13 AI chat
+     07 Skills            14 Responsive & reduced motion
    ========================================================================= */
 
 /* ── 01 TOKENS ─────────────────────────────────────────────────────────── */
@@ -51,6 +50,10 @@
 /* ── 02 RESET & BASE ───────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; padding: 0; }
+/* Several helpers below set display:flex or display:grid, which would outrank
+   the browser's own [hidden] rule. Restate it so toggling `hidden` from JS is
+   always enough to remove something. */
+[hidden] { display: none !important; }
 
 html {
   scroll-behavior: smooth;
@@ -744,15 +747,9 @@ code {
 .about__facts span { color: var(--dim); letter-spacing: .02em; }
 .about__facts b { color: var(--text); font-weight: 600; text-align: right; }
 
-/* ── 07 SKILLS ─────────────────────────────────────────────────────────── */
-/* Registered so the average gauge can animate its sweep when the card lands. */
-@property --p {
-  syntax: '<number>';
-  inherits: false;
-  initial-value: 0;
-}
-
-/* ── 07 SKILLS (Horizontal Scrolling) ─────────────────────────────────── */
+/* ── 07 SKILLS ─────────────────────────────────────────────────────────────
+   One horizontal marquee of every skill. Each chip is a button: hovering shows
+   the cue, clicking opens its family in the detail dialog. */
 .skills {
   overflow: hidden;
   position: relative;
@@ -787,8 +784,9 @@ code {
   padding: 0.5rem 0;
 }
 
-/* Pause animation on hover */
-.skills-track:hover {
+/* Pause the marquee when a visitor is reading it — hover or keyboard. */
+.skills-track:hover,
+.skills-track:focus-within {
   animation-play-state: paused;
 }
 
@@ -805,7 +803,12 @@ code {
   flex-shrink: 0;
   display: inline-flex;
   flex-direction: column;
-  padding: 1.4rem 2rem;
+  align-items: flex-start;
+  text-align: left;
+  /* The bottom padding permanently reserves the cue's row, so revealing it on
+     hover cannot change the chip's height — and therefore cannot resize the
+     track and shunt the whole section. */
+  padding: 1.25rem 1.6rem 2rem;
   background: rgba(5, 7, 15, 0.7);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -814,8 +817,8 @@ code {
   position: relative;
   overflow: hidden;
   transition: all 0.4s var(--ease);
-  cursor: default;
-  min-width: 200px;
+  cursor: pointer;
+  min-width: 214px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
@@ -846,19 +849,24 @@ code {
   mask-composite: exclude;
   opacity: 0;
   transition: opacity 0.4s var(--ease);
+  pointer-events: none;
 }
 
-.skill-chip:hover {
+.skill-chip:hover,
+.skill-chip:focus-visible {
   transform: translateY(-6px) scale(1.02);
   border-color: var(--acc);
   box-shadow: 0 12px 40px -8px var(--glow), 0 0 0 1px var(--acc);
+  outline: none;
 }
 
-.skill-chip:hover::before {
+.skill-chip:hover::before,
+.skill-chip:focus-visible::before {
   opacity: 0.5;
 }
 
-.skill-chip:hover::after {
+.skill-chip:hover::after,
+.skill-chip:focus-visible::after {
   opacity: 1;
 }
 
@@ -887,6 +895,34 @@ code {
   white-space: nowrap;
 }
 
+/* The nudge that says "this opens something". */
+.skill-chip__cue {
+  position: absolute;
+  left: 1.6rem; bottom: 0.75rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.35s var(--ease), transform 0.35s var(--ease);
+}
+.skill-chip:hover .skill-chip__cue,
+.skill-chip:focus-visible .skill-chip__cue {
+  opacity: 1;
+  transform: none;
+}
+
+@media (hover: none) {
+  .skill-chip__cue { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skills-track {
     animation: none;
@@ -896,42 +932,55 @@ code {
   }
 }
 
-/* ── 08 PROJECTS ───────────────────────────────────────────────────────── */
-.projects {
+/* ── 08 GALLERY CARDS — shared by Projects and Works ──────────────────────
+   One tile grammar for every browsable section. The resting face carries just
+   enough to scan; hover, keyboard focus or a touch device slides the summary up
+   over the dead space at the bottom. The reveal is absolutely positioned, so
+   opening it can never resize the tile or reflow the grid. */
+.gcards {
+  list-style: none;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.4rem;
 }
-.project {
+.gcard {
   position: relative;
-  padding: 1.75rem 1.7rem 1.6rem;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 292px;
+  padding: 1.65rem 1.7rem 1.5rem;
   overflow: hidden;
-  transform-style: preserve-3d;
   transition: transform .35s var(--ease), border-color .4s, box-shadow .4s;
 }
-.project::before {
+.gcard:hover, .gcard:focus-within {
+  border-color: var(--acc-line, var(--line-2));
+  box-shadow: 0 30px 70px -32px rgba(0, 0, 0, .92);
+}
+/* Pointer-following wash; --mx/--my come from wireCardMotion(). */
+.gcard::before {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: -1;
   background: radial-gradient(520px 320px at var(--mx, 50%) var(--my, 0%), var(--glow, rgba(100,255,218,.13)), transparent 62%);
   opacity: 0;
   transition: opacity .45s var(--ease);
   pointer-events: none;
 }
-.project:hover::before { opacity: 1; }
-.project:hover { border-color: var(--line-2); box-shadow: 0 30px 70px -30px rgba(0,0,0,.9); }
+.gcard:hover::before, .gcard:focus-within::before { opacity: 1; }
 
-.project__top {
+.gcard__top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: .8rem;
   margin-bottom: 1.1rem;
 }
-.project__kind {
+.gcard__eyebrow {
   font-family: var(--mono);
   font-size: .7rem;
-  letter-spacing: .12em;
+  letter-spacing: .11em;
   text-transform: uppercase;
   padding: .3rem .68rem;
   border-radius: 99px;
@@ -939,19 +988,110 @@ code {
   color: var(--acc, var(--mint));
   background: var(--acc-bg, rgba(100,255,218,.07));
 }
-.project__year { font-family: var(--mono); font-size: .78rem; color: var(--dim); }
-.project h3 {
+.gcard__meta {
+  flex: none;
+  font-family: var(--mono);
+  font-size: .74rem;
+  color: var(--dim);
+}
+.gcard--work .gcard__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: .38rem;
+  color: var(--mint);
+}
+.gcard--work .gcard__meta::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 3px rgba(100, 255, 218, .16);
+}
+.gcard__title {
   font-family: var(--display);
-  font-size: 1.28rem;
+  font-size: clamp(1.14rem, 2.1vw, 1.3rem);
   font-weight: 600;
   letter-spacing: -.018em;
-  margin-bottom: .7rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
   transition: color .3s;
 }
-.project:hover h3 { color: var(--acc, var(--mint)); }
-.project p { color: var(--muted); font-size: .93rem; margin-bottom: 1.2rem; }
+.gcard:hover .gcard__title, .gcard:focus-within .gcard__title { color: var(--acc, var(--mint)); }
+.gcard__sub { margin-top: .32rem; font-size: .86rem; color: var(--violet); }
 
-.chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.35rem; }
+/* Fills the resting space, then steps aside for the summary. */
+.gcard__ghost {
+  position: absolute;
+  right: 1.1rem; bottom: .1rem;
+  font-family: var(--display);
+  font-size: 3.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -.03em;
+  color: rgba(255, 255, 255, .045);
+  pointer-events: none;
+  transition: opacity .4s var(--ease), transform .5s var(--ease);
+}
+.gcard:hover .gcard__ghost, .gcard:focus-within .gcard__ghost {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.gcard__peek {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 1;
+  max-height: 82%;
+  overflow: hidden;
+  padding: 2.6rem 1.7rem 1.4rem;
+  background: linear-gradient(180deg, transparent, rgba(4, 6, 13, .94) 30%, rgba(4, 6, 13, .98));
+  transform: translateY(101%);
+  opacity: 0;
+  transition: transform .5s var(--ease), opacity .35s var(--ease);
+  pointer-events: none;
+}
+.gcard:hover .gcard__peek, .gcard:focus-within .gcard__peek { transform: none; opacity: 1; }
+.gcard__snip {
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.55;
+  margin-bottom: .85rem;
+  overflow-wrap: anywhere;
+}
+.gcard__peek .chips { margin-bottom: .85rem; }
+.gcard__cue {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--acc, var(--mint));
+  transition: gap .3s var(--ease);
+}
+.gcard:hover .gcard__cue { gap: .72rem; }
+
+/* One full-bleed button is the click target. A <button> may not contain an
+   <h3>, so the heading stays real and the hit area sits on top of it. */
+.gcard__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  border: 0;
+  background: none;
+  border-radius: inherit;
+  cursor: pointer;
+}
+/* The card clips its overflow, so the ring has to sit inside the edge. */
+.gcard__hit:focus-visible { outline: 2px solid var(--acc, var(--mint)); outline-offset: -4px; }
+
+/* No hover to give, so the summary simply stays open. */
+@media (hover: none) {
+  .gcard__peek { transform: none; opacity: 1; }
+  .gcard__ghost { opacity: 0; }
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; }
 .chip {
   font-family: var(--mono);
   font-size: .71rem;
@@ -961,68 +1101,17 @@ code {
   border: 1px solid var(--line);
   color: var(--muted);
 }
-.project__links { display: flex; align-items: center; gap: 1.2rem; font-size: .85rem; }
-.project__links a, .project__links span {
-  display: inline-flex;
-  align-items: center;
-  gap: .42rem;
-  font-weight: 600;
-  color: var(--acc, var(--mint));
-  transition: gap .3s var(--ease);
-}
-.project__links a:hover { gap: .68rem; }
-.project__links span { color: var(--dim); cursor: default; }
-.project__idx {
-  position: absolute;
-  right: 1.1rem; bottom: .3rem;
-  font-family: var(--display);
-  font-size: 3.6rem;
-  font-weight: 700;
-  line-height: 1;
-  color: rgba(255, 255, 255, .035);
-  pointer-events: none;
-}
 
-/* ── 09 WORKS / TIMELINE ───────────────────────────────────────────────── */
-.timeline { list-style: none; position: relative; padding-left: 2.1rem; }
-.timeline::before {
-  content: '';
-  position: absolute;
-  left: 5px; top: .5rem; bottom: .5rem;
-  width: 1px;
-  background: linear-gradient(180deg, var(--mint), var(--violet), transparent);
-  opacity: .45;
-}
-.work { position: relative; padding-bottom: 2.4rem; }
-.work:last-child { padding-bottom: 0; }
-.work::before {
-  content: '';
-  position: absolute;
-  left: -2.1rem; top: .55rem;
-  width: 11px; height: 11px;
-  border-radius: 50%;
-  background: var(--bg);
-  border: 2px solid var(--mint);
-  box-shadow: 0 0 0 4px rgba(100, 255, 218, .10);
-  transition: transform .35s var(--ease), box-shadow .35s;
-}
-.work:hover::before { transform: scale(1.35); box-shadow: 0 0 0 7px rgba(100,255,218,.14); }
-.work__period {
-  font-family: var(--mono);
+/* ── 09 WORKS ──────────────────────────────────────────────────────────────
+   Same tiles as Projects, newest first, with the period as the loud label. */
+.gcards--work { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.gcards--work .gcard { min-height: 276px; }
+.gcard--work .gcard__eyebrow {
   font-size: .74rem;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--mint);
-  margin-bottom: .3rem;
+  letter-spacing: .07em;
+  padding: .34rem .78rem;
 }
-.work h3 {
-  font-family: var(--display);
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: -.012em;
-}
-.work__org { font-size: .84rem; color: var(--violet); margin-bottom: .55rem; }
-.work p { color: var(--muted); font-size: .93rem; max-width: 66ch; margin-bottom: .85rem; }
+.gcard--work .gcard__ghost { font-size: 3.1rem; color: rgba(255, 255, 255, .055); }
 
 /* ── 10 GALLERY ────────────────────────────────────────────────────────── */
 .gallery {
@@ -1068,11 +1157,30 @@ code {
     radial-gradient(120% 90% at 85% 85%, rgba(167,139,250,.24), transparent 55%);
 }
 .tile__ph span { position: relative; z-index: 1; }
+.tile__cue {
+  position: absolute;
+  top: .6rem; right: .6rem;
+  z-index: 3;
+  width: 30px; height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(4, 6, 13, .72);
+  border: 1px solid var(--line-2);
+  color: var(--mint);
+  font-size: .82rem;
+  opacity: 0;
+  transform: scale(.82);
+  transition: opacity .35s var(--ease), transform .35s var(--ease);
+  pointer-events: none;
+}
+.tile:hover .tile__cue, .tile:focus-visible .tile__cue { opacity: 1; transform: none; }
 .tile__cap {
   position: absolute;
   inset: auto 0 0 0;
   z-index: 2;
   padding: 1.5rem 1.1rem .95rem;
+  text-align: left;
   background: linear-gradient(180deg, transparent, rgba(4, 6, 13, .92));
   transform: translateY(24%);
   opacity: 0;
@@ -1080,245 +1188,174 @@ code {
 }
 .tile:hover .tile__cap, .tile:focus-visible .tile__cap { transform: none; opacity: 1; }
 .tile__cap b { display: block; font-family: var(--display); font-size: .95rem; font-weight: 600; }
-.tile__cap small { color: var(--muted); font-size: .78rem; }
+.tile__cap small { display: block; color: var(--muted); font-size: .78rem; overflow-wrap: anywhere; }
 
-.lightbox {
+/* Touch has no hover, so the caption rests visible instead. */
+@media (hover: none) {
+  .tile__cap { transform: none; opacity: 1; }
+  .tile__cue { opacity: .8; transform: none; }
+}
+
+/* ── 11 DETAIL DIALOG ──────────────────────────────────────────────────────
+   The single viewer behind every "click for details": Skills groups, Projects,
+   Works and Gallery shots all render into this one shell. */
+.detail {
   position: fixed;
   inset: 0;
   z-index: 400;
   display: grid;
   place-items: center;
-  padding: 1.5rem;
-  background: rgba(3, 5, 11, .9);
-  backdrop-filter: blur(10px);
+  padding: clamp(.85rem, 3vw, 2rem);
   opacity: 0;
   visibility: hidden;
-  transition: opacity .4s var(--ease), visibility .4s;
+  transition: opacity .38s var(--ease), visibility .38s;
 }
-.lightbox.open { opacity: 1; visibility: visible; }
-.lightbox__fig { max-width: 900px; width: 100%; text-align: center; }
-.lightbox__media {
+.detail.open { opacity: 1; visibility: visible; }
+/* Freeze the page behind an open dialog. The stable gutter keeps the
+   scrollbar's width reserved, so hiding it never shifts the layout. */
+html { scrollbar-gutter: stable; }
+html.dialog-open, html.dialog-open body { overflow: hidden; }
+.detail__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 5, 11, .9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.detail__panel {
   position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  border-radius: var(--radius);
+  width: min(720px, 100%);
+  max-height: min(88svh, 940px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: clamp(1.4rem, 3.2vw, 2.1rem);
+  transform: translateY(14px) scale(.972);
+  transition: transform .42s var(--ease);
+}
+.detail.open .detail__panel { transform: none; }
+.detail--media .detail__panel { width: min(940px, 100%); padding-top: clamp(1rem, 2vw, 1.3rem); }
+
+.detail__close {
+  position: absolute;
+  top: clamp(.6rem, 2vw, 1.3rem);
+  right: clamp(.6rem, 2vw, 1.4rem);
+  z-index: 3;
+  width: 40px; height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: rgba(4, 6, 13, .82);
+  color: var(--text);
+  transition: background .3s, transform .3s var(--ease);
+}
+.detail__close:hover { background: rgba(255, 255, 255, .09); transform: rotate(90deg); }
+
+.detail__media {
+  position: relative;
+  margin: 0 0 1.3rem;
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--line-2);
-  transform: scale(.94);
-  transition: transform .45s var(--ease);
+  background: #04060d;
 }
-.lightbox.open .lightbox__media { transform: none; }
-.lightbox__media img { width: 100%; height: 100%; object-fit: cover; }
-.lightbox figcaption { margin-top: 1rem; color: var(--muted); font-size: .9rem; }
-.lightbox__close {
-  position: absolute;
-  top: 1.3rem; right: 1.4rem;
-  width: 42px; height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1px solid var(--line-2);
-  color: var(--text);
-  font-size: 1.1rem;
-  transition: background .3s, transform .3s;
-}
-.lightbox__close:hover { background: rgba(255,255,255,.08); transform: rotate(90deg); }
+.detail__media img { display: block; width: 100%; max-height: 56svh; object-fit: contain; }
+.detail__media .tile__ph { position: relative; width: 100%; aspect-ratio: 16 / 10; }
 
-/* ── 11 FEEDBACK ───────────────────────────────────────────────────────── */
-.feedback {
-  display: grid;
-  grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
-  gap: clamp(1.5rem, 3.5vw, 2.8rem);
-  align-items: start;
-}
-.feedback__form {
-  width: 100%;
-  max-width: 420px;
-  padding: 1.7rem 1.6rem;
-}
-.feedback__title { font-family: var(--display); font-size: 1.1rem; margin-bottom: .3rem; }
-.feedback__hint { font-size: .8rem; color: var(--dim); margin-bottom: 1.4rem; }
-
-.stars {
-  border: 0;
+/* A plain footer row rather than floating arrows: it reads the same with or
+   without an image above it, and never lands on top of the content. */
+.detail__steps {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .3rem;
-  margin-bottom: 1.1rem;
+  gap: .6rem;
+  margin-top: 1.5rem;
+  padding-top: 1.1rem;
+  border-top: 1px dashed var(--line);
 }
-.stars legend {
-  font-size: .78rem;
-  color: var(--dim);
+.detail__step {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .5rem .9rem;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, .03);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .74rem;
   letter-spacing: .06em;
   text-transform: uppercase;
-  margin-inline-end: .6rem;
+  transition: color .3s, border-color .3s, background .3s;
 }
-.stars button {
-  font-size: 1.32rem;
-  color: rgba(255, 255, 255, .16);
-  transition: transform .22s var(--ease), color .22s;
-  padding: .4rem;
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  outline-offset: 2px;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-.stars button:hover { transform: scale(1.18) rotate(-8deg); color: rgba(255, 255, 255, .35); }
-.stars button:focus-visible { outline: 2px solid var(--mint); }
-.stars button.on { color: var(--amber); }
+.detail__step:hover { color: var(--acc, var(--mint)); border-color: var(--acc, var(--mint)); background: rgba(255, 255, 255, .06); }
+#detailPrev svg { transform: rotate(180deg); }
+#detailNext { margin-left: auto; }
 
-.feedback__list {
-  display: grid;
-  gap: 1rem;
-  width: 100%;
-  min-width: 0;
-  align-items: start;
-  align-content: start;
-}
-.quote {
-  display: grid;
-  gap: .8rem;
-  padding: 1.3rem 1.3rem 1.1rem;
-  position: relative;
-  min-width: 0;          /* let the card shrink instead of widening the grid */
-}
-.quote__top {
-  display: flex;
-  align-items: center;
-  gap: .8rem;
-  flex-wrap: wrap;
-  padding-inline-end: 2.2rem;   /* keeps text clear of the delete button */
-}
-.quote__tag {
-  font-size: .8rem;
-  letter-spacing: .04em;
-  color: var(--mint);
-  font-weight: 700;
-  margin-inline-end: auto;      /* rating sits right, but stays adjacent */
-}
-.quote__rate {
-  display: flex;
-  align-items: center;
-  gap: .16rem;
-  flex: none;
-  font-size: .95rem;            /* the stars are 1em, so this sizes them */
-  line-height: 1;
-  color: var(--amber);
-  filter: drop-shadow(0 0 8px rgba(255, 196, 86, .45));
-}
-.quote__rate svg { width: 1em; height: 1em; display: block; flex: none; }
-
-.quote p {
-  color: var(--text);
-  font-size: .95rem;
-  line-height: 1.6;
-  margin: 0;
-  min-width: 0;
-  /* A 400-character URL with no spaces must not stretch the card. */
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.quote footer {
-  display: flex;
-  align-items: center;
-  gap: .7rem;
-  padding-top: .1rem;
-  min-width: 0;
-}
-.quote__av {
-  display: grid;
-  place-items: center;
-  width: 34px; height: 34px;
-  border-radius: 50%;
-  background: var(--grad);
-  color: #05121a;
-  font-weight: 700;
-  font-size: .85rem;
-  flex: none;
-}
-.quote__who {
-  display: grid;
-  gap: .12rem;
-  min-width: 0;
-}
-.quote__who b { display: block; font-size: .88rem; font-weight: 600; }
-.quote__who small { color: var(--dim); font-size: .76rem; }
-.quote__who b, .quote__who small { overflow-wrap: anywhere; }
-
-.quote__del {
-  position: absolute;
-  top: .6rem; right: .6rem;
-  width: 34px; height: 34px;      /* real tap target, not a 12px glyph */
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 0;
-  background: transparent;
-  color: var(--dim);
-  font-size: .85rem;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity .3s, color .3s, background .3s;
-}
-.quote:hover .quote__del,
-.quote:focus-within .quote__del,
-.quote__del:focus-visible { opacity: 1; }
-.quote__del:hover { color: var(--rose); background: rgba(255, 123, 146, .12); }
-.quote__del:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
-/* Touch screens never hover, so hover-only delete is unreachable there. */
-@media (hover: none) {
-  .quote__del { opacity: .75; }
-}
-
-/* A just-posted note pulses once so the eye lands on it. Runs on ::after so it
-   never fights the .reveal.in entrance animation for the animation property. */
-.quote--new::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  pointer-events: none;
-  animation: quoteRing 1.2s var(--ease) both;
-}
-@keyframes quoteRing {
-  from { box-shadow: 0 0 0 0 rgba(100, 255, 218, .5),  0 0 26px 2px rgba(100, 255, 218, .3); }
-  to   { box-shadow: 0 0 0 14px rgba(100, 255, 218, 0), 0 0 26px 2px rgba(100, 255, 218, 0); }
-}
-
-.empty {
-  padding: 2.4rem 1.5rem;
-  text-align: center;
-  border: 1px dashed var(--line-2);
-  border-radius: var(--radius);
-  color: var(--dim);
-  font-size: .9rem;
-  display: grid;
-  justify-items: center;
-  gap: .4rem;
-}
-.empty svg { width: 1.7rem; height: 1.7rem; color: var(--amber); opacity: .5; }
-.empty b {
-  font-family: var(--display);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text);
-}
-.empty p { margin: 0; max-width: 34ch; }
-
-/* Live character budget under the feedback textarea. */
-.field__count {
-  display: block;
-  margin-top: .35rem;
-  text-align: right;
+.detail__eyebrow {
   font-family: var(--mono);
   font-size: .72rem;
-  color: var(--dim);
-  font-variant-numeric: tabular-nums;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--acc, var(--mint));
+  margin-bottom: .5rem;
 }
-.field__count.near { color: var(--amber); }
+.detail__title {
+  font-family: var(--display);
+  font-size: clamp(1.3rem, 3.4vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -.024em;
+  line-height: 1.15;
+  padding-right: 2.6rem;
+  overflow-wrap: anywhere;
+}
+.detail__sub { margin-top: .45rem; font-size: .92rem; color: var(--violet); overflow-wrap: anywhere; }
+.detail__text { margin-top: 1.15rem; }
+.detail__text p { color: var(--muted); font-size: .95rem; line-height: 1.72; }
+.detail__text p + p { margin-top: .8rem; }
+.rt-list { list-style: none; display: grid; gap: .62rem; }
+.rt-list li {
+  position: relative;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  font-size: .95rem;
+  line-height: 1.65;
+}
+.rt-list li::before {
+  content: '';
+  position: absolute;
+  left: 0; top: .62em;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--acc, var(--mint));
+}
+#detailTags { margin-top: 1.25rem; }
+.detail__links { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; margin-top: 1.35rem; }
+.detail__soon { font-family: var(--mono); font-size: .78rem; color: var(--dim); }
+
+/* Skill families — just the names, in columns you can scan. */
+.fam {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: .55rem 1.4rem;
+}
+.fam li {
+  position: relative;
+  padding-left: 1.05rem;
+  font-size: .94rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.fam li::before {
+  content: '';
+  position: absolute;
+  left: 0; top: .62em;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--acc, var(--mint));
+}
 
 /* ── 12 CONTACT & FOOTER ───────────────────────────────────────────────── */
 .contact {
@@ -1637,8 +1674,7 @@ code {
 }
 
 @media (max-width: 1024px) {
-  .about, .feedback, .contact { grid-template-columns: 1fr; }
-  .feedback__form { max-width: none; }
+  .about, .contact { grid-template-columns: 1fr; }
   .about__card { position: static; }
   .nav__links a { padding: .5rem .6rem; font-size: .83rem; }
 }
@@ -1677,12 +1713,6 @@ code {
   .tile.wide { grid-column: span 2; }
   .tile.tall { grid-row: span 1; }
   .hero__cta .btn { flex: 1 1 auto; justify-content: center; }
-  .feedback { gap: 1rem; }
-  .feedback__form { padding: 1.2rem 1rem; }
-  .feedback__list { gap: .75rem; }
-  .quote { padding: 1rem 1rem .9rem; }
-  .quote__tag { font-size: .74rem; }
-  .quote__rate { font-size: .88rem; }
   .scroll-cue { display: none; }
   .about__body p:first-child::first-letter { font-size: 2.6rem; }
   .footer__inner { flex-direction: column; text-align: center; }
@@ -1696,7 +1726,27 @@ code {
   }
   .chat-fab { right: 16px; bottom: 16px; width: 52px; height: 52px; }
   .chat-fab__tip { display: none; }
-  .project__idx { font-size: 2.8rem; }
+
+  /* Single column, and the summary is already open on touch — so size the tile
+     to its content instead of holding space for a reveal that never slides. */
+  .gcards, .gcards--work { grid-template-columns: 1fr; gap: 1rem; }
+  .gcard, .gcards--work .gcard { min-height: 0; padding: 1.3rem 1.25rem 1.15rem; }
+  .gcard__peek {
+    position: static;
+    max-height: none;
+    padding: 1.1rem 0 0;
+    background: none;
+    /* Static flow means the slide-up no longer has anywhere to hide, so the
+       summary rests open at this width whether or not hover exists. */
+    transform: none;
+    opacity: 1;
+  }
+  .gcard__ghost { display: none; }
+  .skill-chip { min-width: 190px; padding: 1.1rem 1.3rem 1.9rem; }
+  .skill-chip__cue { left: 1.3rem; }
+  .detail__panel { padding: 1.2rem 1.1rem 1.4rem; max-height: 90svh; }
+  .detail__title { padding-right: 2.2rem; }
+  .detail__step { font-size: .7rem; padding: .48rem .7rem; }
 }
 
 @media (max-width: 420px) {

@@ -27,11 +27,44 @@ export const md = (s) => esc(tidy(s))
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
+/* data.js wraps prose to keep the file readable, so a single bullet can span
+   several source lines. Rejoin the continuations, then hand back the items —
+   or null when the text was never a list to begin with. */
+function bulletize(raw) {
+  const lines = String(raw).split('\n').map((l) => l.trim()).filter(Boolean);
+  if (!lines.some((l) => /^[-*•]\s/.test(l))) return null;
+
+  const items = [];
+  lines.forEach((l) => {
+    if (/^[-*•]\s/.test(l)) items.push(l.replace(/^[-*•]\s*/, ''));
+    else if (items.length) items[items.length - 1] += ` ${l}`;
+    else items.push(l);
+  });
+  return items;
+}
+
+/** Full body copy for the detail dialog: a real list when the source uses
+ *  "- ", otherwise one paragraph per blank-line-separated block. */
+const richText = (raw) => {
+  const items = bulletize(raw);
+  return items
+    ? `<ul class="rt-list">${items.map((i) => `<li>${md(i)}</li>`).join('')}</ul>`
+    : String(raw).split(/\n{2,}/).map((p) => `<p>${md(p)}</p>`).join('');
+};
+
+/** One-line teaser for a hover state. Cuts on a word boundary, never mid-word. */
+const snippet = (raw, max = 132) => {
+  const items = bulletize(raw);
+  const s = tidy(items ? items[0] : raw);
+  return s.length <= max ? s : `${s.slice(0, max - 1).replace(/\s+\S*$/, '')}…`;
+};
+
 const ACCENTS = {
   mint:   { c: '#64ffda', line: 'rgba(100,255,218,.28)', bg: 'rgba(100,255,218,.07)', glow: 'rgba(100,255,218,.14)' },
   violet: { c: '#a78bfa', line: 'rgba(167,139,250,.32)', bg: 'rgba(167,139,250,.08)', glow: 'rgba(167,139,250,.16)' },
   amber:  { c: '#ffcc70', line: 'rgba(255,204,112,.32)', bg: 'rgba(255,204,112,.08)', glow: 'rgba(255,204,112,.14)' },
   rose:   { c: '#ff7b92', line: 'rgba(255,123,146,.32)', bg: 'rgba(255,123,146,.08)', glow: 'rgba(255,123,146,.14)' },
+  blue:   { c: '#7ee8ff', line: 'rgba(126,232,255,.32)', bg: 'rgba(126,232,255,.08)', glow: 'rgba(126,232,255,.15)' },
 };
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -44,8 +77,6 @@ const revealObserver = new IntersectionObserver((entries) => {
   entries.forEach((en) => {
     if (!en.isIntersecting) return;
     en.target.classList.add('in');
-    // Skill bars fill only once they are actually on screen.
-    $$('.bar i', en.target).forEach((bar) => { bar.style.width = bar.dataset.w + '%'; });
     revealObserver.unobserve(en.target);
   });
 }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
@@ -55,34 +86,108 @@ function observeReveals() {
     if (revealed.has(el)) return;
     revealed.add(el);
     if (el.dataset.delay) el.style.setProperty('--d', el.dataset.delay);
-    if (reduced) {
-      el.classList.add('in');
-      $$('.bar i', el).forEach((b) => { b.style.width = b.dataset.w + '%'; });
-    } else {
-      revealObserver.observe(el);
-    }
+    if (reduced) el.classList.add('in');
+    else revealObserver.observe(el);
   });
 }
 
-/** Show an element right now, bypassing the scroll observer. Used for content
- *  the visitor just created — it must never sit at opacity 0 waiting to be
- *  scrolled into view. */
-function revealNow(el) {
-  revealObserver.unobserve(el);
-  revealed.add(el);
-  el.style.setProperty('--d', 0);
-  el.classList.add('in');
-  $$('.bar i', el).forEach((b) => { b.style.width = b.dataset.w + '%'; });
+/* ══════════════════════════════════════════════════════════════════════════
+   DETAIL DIALOG — the shared "click for the details" viewer.
+   Skills, Projects, Works and Gallery all hand it the same shape, so the focus
+   trap, the Escape path and the styling exist exactly once.
+     { eyebrow, title, sub, body, tags, links, media, accent, step }
+   `body` and `media` are HTML the renderers built; everything sourced from
+   data.js has already been through esc() or md() by then.
+   ══════════════════════════════════════════════════════════════════════ */
+const FOCUSABLE = 'a[href], button:not([disabled]):not([hidden])';
+
+let lastFocus = null;
+let stepper = null;   // { prev, next } while a browsable set is open
+
+function openDetail({
+  eyebrow = '', title = '', sub = '', body = '',
+  tags = [], links = [], media = '', accent = 'mint', step = null,
+} = {}) {
+  const dlg = $('#detail');
+  const a = ACCENTS[accent] || ACCENTS.mint;
+  dlg.style.setProperty('--acc', a.c);
+  dlg.style.setProperty('--acc-line', a.line);
+  dlg.style.setProperty('--acc-bg', a.bg);
+  dlg.classList.toggle('detail--media', Boolean(media));
+
+  const fill = (sel, html) => {
+    const el = $(sel);
+    el.innerHTML = html;
+    el.hidden = !html;
+  };
+
+  fill('#detailEyebrow', eyebrow ? esc(eyebrow) : '');
+  $('#detailTitle').textContent = title;
+  fill('#detailSub', sub ? esc(sub) : '');
+  fill('#detailText', body);
+  fill('#detailTags', tags.map((t) => `<span class="chip">${esc(t)}</span>`).join(''));
+  fill('#detailLinks', links.map((l) => (l.href
+    ? `<a class="btn ${l.primary ? 'btn--primary' : 'btn--ghost'} btn--sm" href="${esc(l.href)}"
+         target="_blank" rel="noopener">${esc(l.label)} <svg><use href="#i-${esc(l.icon || 'external')}"/></svg></a>`
+    : `<span class="detail__soon">${esc(l.label)}</span>`)).join(''));
+
+  fill('#detailMedia', media);
+
+  // Stepping is only offered when the caller hands over a set to walk.
+  stepper = step;
+  $('#detailSteps').hidden = !step;
+
+  // Remember where the visitor was so Escape can put them back.
+  const wasOpen = dlg.classList.contains('open');
+  if (!wasOpen) lastFocus = document.activeElement;
+  dlg.classList.add('open');
+  dlg.setAttribute('aria-hidden', 'false');
+  document.documentElement.classList.add('dialog-open');
+
+  // New content, so start it from the top either way.
+  $('.detail__panel', dlg).scrollTop = 0;
+  // Take focus only on a fresh open. Stepping must leave the visitor on the
+  // Next button they just pressed, or Enter would close instead of advance.
+  if (!wasOpen) $('#detailClose').focus();
 }
 
-/** Scroll `el` into view only when it is not already fully on screen. */
-function scrollIntoViewIfNeeded(el) {
-  const navH = parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue('--nav-h'), 10,
-  ) || 72;
-  const r = el.getBoundingClientRect();
-  if (r.top >= navH && r.bottom <= innerHeight) return;
-  el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+function closeDetail() {
+  const dlg = $('#detail');
+  if (!dlg.classList.contains('open')) return;
+  dlg.classList.remove('open');
+  dlg.setAttribute('aria-hidden', 'true');
+  document.documentElement.classList.remove('dialog-open');
+  stepper = null;
+  lastFocus?.focus();
+}
+
+/** Keep Tab inside the dialog while it is open. */
+function trapFocus(e) {
+  const dlg = $('#detail');
+  if (e.key !== 'Tab' || !dlg.classList.contains('open')) return;
+  const items = $$(FOCUSABLE, dlg).filter((el) => el.offsetParent !== null);
+  if (!items.length) return;
+
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
+function wireDetail() {
+  const dlg = $('#detail');
+  $('#detailClose').addEventListener('click', closeDetail);
+  $('.detail__scrim', dlg).addEventListener('click', closeDetail);
+  $('#detailPrev').addEventListener('click', () => stepper?.prev());
+  $('#detailNext').addEventListener('click', () => stepper?.next());
+
+  addEventListener('keydown', (e) => {
+    if (!dlg.classList.contains('open')) return;
+    if (e.key === 'Escape')     { closeDetail(); return; }
+    if (e.key === 'ArrowLeft')  { stepper?.prev(); return; }
+    if (e.key === 'ArrowRight') { stepper?.next(); return; }
+    trapFocus(e);
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -150,72 +255,104 @@ function renderAbout() {
   }
 }
 
-/* Skill groups cycle the palette, so each card reads as its own family. */
+/* Skill groups cycle the palette, so each family reads as its own colour. */
 const SKILL_ACCENTS = ['mint', 'violet', 'amber', 'rose'];
 
+const skillAccent = (groupName) => {
+  const i = skills.findIndex((g) => g.group === groupName);
+  return SKILL_ACCENTS[(i < 0 ? 0 : i) % SKILL_ACCENTS.length];
+};
+
 function renderSkills() {
-  // Flatten all skills into one continuous array for horizontal scrolling
-  const allSkills = skills.flatMap(group => 
-    group.items.map(item => ({
-      name: item.name,
-      group: group.group,
-      icon: group.icon
-    }))
-  );
-  
-  // Triple for seamless infinite scroll (need enough content for smooth loop)
-  const tripled = [...allSkills, ...allSkills, ...allSkills];
-  
+  // One flat marquee of every skill. Levels stay out of it — the name and the
+  // family it belongs to are the whole story here.
+  const flat = skills.flatMap((group) => group.items.map((item) => ({
+    name:  item.name,
+    group: group.group,
+  })));
+
+  // Tripled so the loop can hand off seamlessly. Copies 2 and 3 are decoration:
+  // they are hidden from assistive tech and skipped by Tab, so the visitor
+  // tabs through each skill exactly once.
+  const chip = (s, clone) => {
+    const a = ACCENTS[skillAccent(s.group)];
+    return `
+      <button class="skill-chip" type="button"
+        ${clone ? 'tabindex="-1" aria-hidden="true"' : `aria-label="${esc(s.name)} — open the ${esc(s.group)} family"`}
+        data-group="${esc(s.group)}"
+        style="--acc:${a.c};--acc-bg:${a.bg};--glow:${a.glow}">
+        <span class="skill-chip__name">${esc(s.name)}</span>
+        <span class="skill-chip__group">${esc(s.group)}</span>
+        <span class="skill-chip__cue" aria-hidden="true">See the family</span>
+      </button>`;
+  };
+
   $('#skillsGrid').innerHTML = `
     <div class="skills-scroll-container">
       <div class="skills-track" id="skillsTrack">
-        ${tripled.map((skill, i) => {
-          const colorIndex = skills.findIndex(g => g.group === skill.group);
-          const a = ACCENTS[SKILL_ACCENTS[colorIndex % SKILL_ACCENTS.length]];
-          return `
-            <div class="skill-chip" 
-              style="--acc:${a.c};--acc-bg:${a.bg};--glow:${a.glow};">
-              <span class="skill-chip__name">${esc(skill.name)}</span>
-              <span class="skill-chip__group">${esc(skill.group)}</span>
-            </div>
-          `;
-        }).join('')}
+        ${flat.map((s) => chip(s, false)).join('')}
+        ${flat.map((s) => chip(s, true)).join('')}
+        ${flat.map((s) => chip(s, true)).join('')}
       </div>
-    </div>
-  `;
-  
-  // Pause on hover - handled by CSS :hover now
+    </div>`;
+
+  // Any chip — original or clone — opens its whole family.
+  $$('.skill-chip').forEach((el) => {
+    el.addEventListener('click', () => openSkillGroup(el.dataset.group));
+  });
 }
 
-function renderProjects() {
-  $('#projectsGrid').innerHTML = projects.map((p, i) => {
-    const a = ACCENTS[p.accent] || ACCENTS.mint;
-    return `
-    <article class="project glass reveal" data-delay="${i}"
-      style="--acc:${a.c};--acc-line:${a.line};--acc-bg:${a.bg};--glow:${a.glow}">
-      <div class="project__top">
-        <span class="project__kind">${esc(p.kind)}</span>
-        <span class="project__year">${esc(p.year)}</span>
-      </div>
-      <h3>${esc(p.title)}</h3>
-      <p>${md(p.blurb)}</p>
-      <div class="chips">${p.tech.map((t) => `<span class="chip">${esc(t)}</span>`).join('')}</div>
-      <div class="project__links">
-        ${p.link
-          ? `<a href="${esc(p.link)}" target="_blank" rel="noopener">Live demo <svg><use href="#i-external"/></svg></a>`
-          : `<span>Demo coming soon</span>`}
-        ${p.repo
-          ? `<a href="${esc(p.repo)}" target="_blank" rel="noopener">Source <svg><use href="#i-github"/></svg></a>`
-          : ''}
-      </div>
-      <span class="project__idx" aria-hidden="true">0${i + 1}</span>
-    </article>`;
-  }).join('');
+/** The full family behind one chip: every sibling skill, no scores attached. */
+function openSkillGroup(groupName) {
+  const group = skills.find((g) => g.group === groupName);
+  if (!group) return;
 
+  const order = skills.map((g) => g.group);
+  const at = order.indexOf(groupName);
+
+  openDetail({
+    accent: skillAccent(groupName),
+    eyebrow: 'Skills',
+    title: groupName,
+    sub: `${group.items.length} in this family`,
+    body: `<ul class="fam">${group.items.map((it) => `<li>${esc(it.name)}</li>`).join('')}</ul>`,
+    step: order.length > 1 ? {
+      prev: () => openSkillGroup(order[(at - 1 + order.length) % order.length]),
+      next: () => openSkillGroup(order[(at + 1) % order.length]),
+    } : null,
+  });
+}
+
+/* ── Gallery cards (Projects + Works) ─────────────────────────────────────
+   Both sections share one tile: a resting face you can scan, a summary that
+   rises on hover or focus, and a full-bleed button that opens the dialog.
+   The heading stays a real <h3>, which is why the hit area is a sibling
+   overlay rather than a <button> wrapping everything. */
+function gcard({ variant, accent, eyebrow, meta, title, sub, snip, tags, ghost, i, label }) {
+  const a = ACCENTS[accent] || ACCENTS.mint;
+  return `
+  <li class="gcard gcard--${variant} glass reveal" data-delay="${i}" data-i="${i}"
+    style="--acc:${a.c};--acc-line:${a.line};--acc-bg:${a.bg};--glow:${a.glow}">
+    <div class="gcard__top">
+      <span class="gcard__eyebrow">${esc(eyebrow)}</span>
+      ${meta ? `<span class="gcard__meta">${esc(meta)}</span>` : ''}
+    </div>
+    <h3 class="gcard__title">${esc(title)}</h3>
+    ${sub ? `<p class="gcard__sub">${esc(sub)}</p>` : ''}
+    <span class="gcard__ghost" aria-hidden="true">${esc(ghost)}</span>
+    <div class="gcard__peek">
+      <p class="gcard__snip">${esc(snip)}</p>
+      <div class="chips">${tags.map((t) => `<span class="chip">${esc(t)}</span>`).join('')}</div>
+      <span class="gcard__cue">Full details <svg><use href="#i-arrow"/></svg></span>
+    </div>
+    <button class="gcard__hit" type="button" aria-label="${esc(label)}"></button>
+  </li>`;
+}
+
+/** Restrained tilt + a glow that follows the pointer. Skipped for reduced motion. */
+function wireCardMotion(root) {
   if (reduced) return;
-
-  // Pointer-following glow + a restrained 3D tilt.
-  $$('.project').forEach((card) => {
+  $$('.gcard', root).forEach((card) => {
     card.addEventListener('pointermove', (e) => {
       const r = card.getBoundingClientRect();
       const px = (e.clientX - r.left) / r.width;
@@ -223,21 +360,100 @@ function renderProjects() {
       card.style.setProperty('--mx', `${px * 100}%`);
       card.style.setProperty('--my', `${py * 100}%`);
       card.style.transform =
-        `perspective(900px) rotateY(${(px - .5) * 6}deg) rotateX(${(.5 - py) * 5}deg) translateY(-4px)`;
+        `perspective(900px) rotateY(${(px - .5) * 5}deg) rotateX(${(.5 - py) * 4}deg) translateY(-4px)`;
     });
     card.addEventListener('pointerleave', () => { card.style.transform = ''; });
   });
 }
 
+function renderProjects() {
+  const grid = $('#projectsGrid');
+
+  grid.innerHTML = projects.map((p, i) => gcard({
+    variant: 'project',
+    accent: p.accent,
+    eyebrow: p.kind,
+    meta: p.year,
+    title: p.title,
+    sub: '',
+    snip: snippet(p.blurb),
+    tags: p.tech.slice(0, 4),
+    ghost: `0${i + 1}`.slice(-2),
+    i,
+    label: `Open details for ${p.title}`,
+  })).join('');
+
+  $$('.gcard__hit', grid).forEach((hit, i) => {
+    hit.addEventListener('click', () => openProject(i));
+  });
+  wireCardMotion(grid);
+}
+
+function openProject(i) {
+  const p = projects[i];
+  openDetail({
+    accent: p.accent,
+    eyebrow: `${p.kind} · ${p.year}`,
+    title: p.title,
+    sub: '',
+    body: richText(p.blurb),
+    tags: p.tech,
+    links: [
+      p.link ? { label: 'Live demo', href: p.link, icon: 'external', primary: true }
+             : { label: 'Demo coming soon' },
+      p.repo ? { label: 'Source', href: p.repo, icon: 'github' } : null,
+    ].filter(Boolean),
+    step: projects.length > 1 ? {
+      prev: () => openProject((i - 1 + projects.length) % projects.length),
+      next: () => openProject((i + 1) % projects.length),
+    } : null,
+  });
+}
+
+/* Newest first — the most recent role is the one worth reading. */
+const workOrder = [...works].reverse();
+const WORK_ACCENTS = ['mint', 'violet', 'amber', 'rose'];
+
+/** The year label the user asked to keep: the first year in the period. */
+const startYear = (period) => (String(period).match(/\d{4}/) || ['—'])[0];
+
 function renderWorks() {
-  $('#timeline').innerHTML = works.map((w, i) => `
-    <li class="work reveal" data-delay="${i}">
-      <p class="work__period">${esc(w.period)}</p>
-      <h3>${esc(w.title)}</h3>
-      <p class="work__org">${esc(w.org)}</p>
-      <p>${md(w.detail)}</p>
-      <div class="chips">${w.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join('')}</div>
-    </li>`).join('');
+  const grid = $('#worksGrid');
+
+  grid.innerHTML = workOrder.map((w, i) => gcard({
+    variant: 'work',
+    accent: WORK_ACCENTS[i % WORK_ACCENTS.length],
+    eyebrow: w.period,
+    meta: /present/i.test(w.period) ? 'Current' : '',
+    title: w.title,
+    sub: w.org,
+    snip: snippet(w.detail),
+    tags: w.tags.slice(0, 4),
+    ghost: startYear(w.period),
+    i,
+    label: `Open details for ${w.title} at ${w.org}`,
+  })).join('');
+
+  $$('.gcard__hit', grid).forEach((hit, i) => {
+    hit.addEventListener('click', () => openWork(i));
+  });
+  wireCardMotion(grid);
+}
+
+function openWork(i) {
+  const w = workOrder[i];
+  openDetail({
+    accent: WORK_ACCENTS[i % WORK_ACCENTS.length],
+    eyebrow: w.period,
+    title: w.title,
+    sub: w.org,
+    body: richText(w.detail),
+    tags: w.tags,
+    step: workOrder.length > 1 ? {
+      prev: () => openWork((i - 1 + workOrder.length) % workOrder.length),
+      next: () => openWork((i + 1) % workOrder.length),
+    } : null,
+  });
 }
 
 function renderGallery() {
@@ -245,39 +461,34 @@ function renderGallery() {
   // Spans, not divs: a <button>'s content model is phrasing content only.
   grid.innerHTML = gallery.map((g, i) => `
     <button class="tile reveal${g.span ? ' ' + esc(g.span) : ''}"
-            data-delay="${i}" type="button" aria-label="View ${esc(g.title)}">
+            data-delay="${i}" type="button" aria-label="Open ${esc(g.title)} — ${esc(g.caption)}">
       ${g.src
         ? `<img src="${esc(g.src)}" alt="${esc(g.title)}" loading="lazy" decoding="async">`
         : `<span class="tile__ph"><span>${esc(g.title.charAt(0))}</span></span>`}
+      <span class="tile__cue" aria-hidden="true"><svg><use href="#i-external"/></svg></span>
       <span class="tile__cap"><b>${esc(g.title)}</b><small>${esc(g.caption)}</small></span>
     </button>`).join('');
 
   $$('.tile', grid).forEach((tile, i) => {
-    tile.addEventListener('click', () => openLightbox(i));
+    tile.addEventListener('click', () => openShot(i));
   });
 }
 
-/* ── Lightbox ─────────────────────────────────────────────────────────── */
-let lastFocus = null;
-
-function openLightbox(i) {
+function openShot(i) {
   const g = gallery[i];
-  lastFocus = document.activeElement;
-  $('#lightboxMedia').innerHTML = g.src
-    ? `<img src="${esc(g.src)}" alt="${esc(g.title)}">`
-    : `<span class="tile__ph"><span>${esc(g.title.charAt(0))}</span></span>`;
-  $('#lightboxCap').innerHTML = `<b>${esc(g.title)}</b> — ${esc(g.caption)}`;
-  const lb = $('#lightbox');
-  lb.classList.add('open');
-  lb.setAttribute('aria-hidden', 'false');
-  $('#lightboxClose').focus();
-}
-
-function closeLightbox() {
-  const lb = $('#lightbox');
-  lb.classList.remove('open');
-  lb.setAttribute('aria-hidden', 'true');
-  lastFocus?.focus();
+  openDetail({
+    accent: 'violet',
+    eyebrow: `Gallery · ${i + 1} of ${gallery.length}`,
+    title: g.title,
+    sub: g.caption,
+    media: g.src
+      ? `<img src="${esc(g.src)}" alt="${esc(g.title)}">`
+      : `<span class="tile__ph"><span>${esc(g.title.charAt(0))}</span></span>`,
+    step: gallery.length > 1 ? {
+      prev: () => openShot((i - 1 + gallery.length) % gallery.length),
+      next: () => openShot((i + 1) % gallery.length),
+    } : null,
+  });
 }
 
 /* ── Contact ──────────────────────────────────────────────────────────── */
@@ -442,15 +653,7 @@ export function initUI({ onSection, openChat } = {}) {
   typewriter();
   wireNav(onSection);
   wireCursorGlow();
-
-  // Lightbox close paths
-  $('#lightboxClose').addEventListener('click', closeLightbox);
-  $('#lightbox').addEventListener('click', (e) => {
-    if (e.target.id === 'lightbox') closeLightbox();
-  });
-  addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && $('#lightbox').classList.contains('open')) closeLightbox();
-  });
+  wireDetail();
 
   // "Ask my AI" in the hero opens the chat panel.
   $('#heroAsk').addEventListener('click', () => openChat?.());

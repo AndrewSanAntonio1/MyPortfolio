@@ -28,7 +28,7 @@ const JUMP = {
   math:      ['about',    'Read About me'],
   identity:  ['about',    'Read About me'],
   tools:     ['skills',   'Jump to Skills'],
-  learning:  ['works',    'See the timeline'],
+  learning:  ['works',    'See my Works'],
   site:      ['gallery',  'Open Gallery'],
 };
 

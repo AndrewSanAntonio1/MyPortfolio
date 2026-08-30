@@ -13,7 +13,7 @@
      pointer                — the head looks toward your cursor
 
    POSES per section: home waves, skills cheers, projects points, works walks,
-   gallery jumps, feedback gives a thumbs-up. Everything eases; nothing snaps.
+   gallery jumps, contact waves again. Everything eases; nothing snaps.
 
    Performance guards: DPR capped at 1.75, shadows and stud density reduced on
    small screens, rAF paused when the tab is hidden, one static frame when the
@@ -42,7 +42,6 @@ const MOODS = {
   projects: { a: 0x64ffda, b: 0xffcc70, camZ: 6.80, pos: [-1.80, -0.20], turn: -0.95, pose: 'point',  scale: 1.05 },
   works:    { a: 0xffcc70, b: 0xa78bfa, camZ: 6.20, pos: [ 2.10, -0.35], turn:  0.75, pose: 'walk',   scale: 0.82 },
   gallery:  { a: 0xff7b92, b: 0x7c5cff, camZ: 7.20, pos: [ 0.00, -1.30], turn:  0.10, pose: 'jump',   scale: 1.15 },
-  feedback: { a: 0x7ee8ff, b: 0xa78bfa, camZ: 6.00, pos: [-2.00, -0.30], turn: -0.40, pose: 'thumbs', scale: 0.88 },
   contact:  { a: 0x64ffda, b: 0x7ee8ff, camZ: 5.20, pos: [ 1.70, -0.25], turn:  0.00, pose: 'wave',   scale: 1.02 },
 };
 
@@ -64,7 +63,6 @@ const POSES = {
   point:  { aL: [ 0.00, 0, -0.12], aR: [-1.45, 0,  0.12], lL: [0, 0, -0.02], lR: [0, 0, 0.02] },
   walk:   { aL: [ 0.55, 0, -0.12], aR: [-0.55, 0,  0.12], lL: [-0.45, 0, -0.02], lR: [0.45, 0, 0.02], swing: true },
   jump:   { aL: [ 0.00, 0, -2.25], aR: [ 0.00, 0,  2.25], lL: [ 0.30, 0, -0.05], lR: [-0.30, 0, 0.05], hop: true },
-  thumbs: { aL: [ 0.00, 0, -0.10], aR: [-1.90, 0,  0.30], lL: [0, 0, -0.02], lR: [0, 0, 0.02] },
 };
 
 /* ── Starfield shaders (kept from the original scene for depth) ─────────── */
