@@ -4,7 +4,7 @@
    Nothing here invents content. If a section looks wrong, edit data.js.
    ========================================================================= */
 
-import { profile, about, skills, projects, works, gallery, testimonials }
+import { profile, about, skills, projects, works, gallery }
   from './data.js';
 
 /* ── Shared helpers (chat.js imports these too) ────────────────────────── */
@@ -34,7 +34,6 @@ const ACCENTS = {
   rose:   { c: '#ff7b92', line: 'rgba(255,123,146,.32)', bg: 'rgba(255,123,146,.08)', glow: 'rgba(255,123,146,.14)' },
 };
 
-const FB_KEY = 'portfolio.feedback.v1';
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -63,6 +62,27 @@ function observeReveals() {
       revealObserver.observe(el);
     }
   });
+}
+
+/** Show an element right now, bypassing the scroll observer. Used for content
+ *  the visitor just created — it must never sit at opacity 0 waiting to be
+ *  scrolled into view. */
+function revealNow(el) {
+  revealObserver.unobserve(el);
+  revealed.add(el);
+  el.style.setProperty('--d', 0);
+  el.classList.add('in');
+  $$('.bar i', el).forEach((b) => { b.style.width = b.dataset.w + '%'; });
+}
+
+/** Scroll `el` into view only when it is not already fully on screen. */
+function scrollIntoViewIfNeeded(el) {
+  const navH = parseInt(
+    getComputedStyle(document.documentElement).getPropertyValue('--nav-h'), 10,
+  ) || 72;
+  const r = el.getBoundingClientRect();
+  if (r.top >= navH && r.bottom <= innerHeight) return;
+  el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -134,35 +154,37 @@ function renderAbout() {
 const SKILL_ACCENTS = ['mint', 'violet', 'amber', 'rose'];
 
 function renderSkills() {
-  $('#skillsGrid').innerHTML = skills.map((group, g) => {
-    const a = ACCENTS[SKILL_ACCENTS[g % SKILL_ACCENTS.length]];
-    const items = group.items || [];
-    const levels = items.map((s) => Math.max(0, Math.min(100, Number(s.level) || 0)));
-    const avg = levels.length
-      ? Math.round(levels.reduce((sum, n) => sum + n, 0) / levels.length)
-      : 0;
-
-    return `
-    <article class="skill-card glass reveal" data-delay="${g}"
-      style="--acc:${a.c};--acc-line:${a.line};--acc-bg:${a.bg};--glow:${a.glow};--avg:${avg}">
-      <div class="skill-card__head">
-        <div class="skill-card__id">
-          <h3>${esc(group.group)}</h3>
-          <p class="skill-card__meta">${items.length} skill${items.length === 1 ? '' : 's'}</p>
-        </div>
-        <span class="skill-card__avg" title="Group average">
-          <b>${avg}<i aria-hidden="true">%</i></b>
-        </span>
+  // Flatten all skills into one continuous array for horizontal scrolling
+  const allSkills = skills.flatMap(group => 
+    group.items.map(item => ({
+      name: item.name,
+      group: group.group,
+      icon: group.icon
+    }))
+  );
+  
+  // Triple for seamless infinite scroll (need enough content for smooth loop)
+  const tripled = [...allSkills, ...allSkills, ...allSkills];
+  
+  $('#skillsGrid').innerHTML = `
+    <div class="skills-scroll-container">
+      <div class="skills-track" id="skillsTrack">
+        ${tripled.map((skill, i) => {
+          const colorIndex = skills.findIndex(g => g.group === skill.group);
+          const a = ACCENTS[SKILL_ACCENTS[colorIndex % SKILL_ACCENTS.length]];
+          return `
+            <div class="skill-chip" 
+              style="--acc:${a.c};--acc-bg:${a.bg};--glow:${a.glow};">
+              <span class="skill-chip__name">${esc(skill.name)}</span>
+              <span class="skill-chip__group">${esc(skill.group)}</span>
+            </div>
+          `;
+        }).join('')}
       </div>
-      <div class="skill-rows">
-        ${items.map((s, i) => `
-        <div class="skill-row">
-          <div class="skill-row__top"><span>${esc(s.name)}</span><i>${levels[i]}%</i></div>
-          <div class="bar"><i data-w="${levels[i]}" style="--i:${i}"></i></div>
-        </div>`).join('')}
-      </div>
-    </article>`;
-  }).join('');
+    </div>
+  `;
+  
+  // Pause on hover - handled by CSS :hover now
 }
 
 function renderProjects() {
@@ -256,101 +278,6 @@ function closeLightbox() {
   lb.classList.remove('open');
   lb.setAttribute('aria-hidden', 'true');
   lastFocus?.focus();
-}
-
-/* ── Feedback ─────────────────────────────────────────────────────────── */
-const loadLocal = () => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(FB_KEY));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
-};
-const saveLocal = (list) => {
-  try { localStorage.setItem(FB_KEY, JSON.stringify(list)); } catch { /* private mode */ }
-};
-
-function renderFeedback() {
-  const local = loadLocal();
-  const all = [...local, ...testimonials];
-  const list = $('#feedbackList');
-
-  if (!all.length) {
-    list.innerHTML = `<div class="empty reveal">
-      No feedback yet — yours would be the first. Nothing on this page is invented,
-      so this stays empty until someone writes something real.</div>`;
-    observeReveals();
-    return;
-  }
-
-  list.innerHTML = all.map((t, i) => {
-    const isLocal = i < local.length;
-    const rate = Math.max(0, Math.min(5, Number(t.rating) || 0));
-    return `
-    <blockquote class="quote glass reveal" data-delay="${i}">
-      ${rate ? `<div class="quote__rate" aria-label="${rate} out of 5">
-        ${'<svg><use href="#i-star"/></svg>'.repeat(rate)}</div>` : ''}
-      <p>${esc(t.quote).replace(/\n+/g, '<br>')}</p>
-      <footer>
-        <span class="quote__av" aria-hidden="true">${esc((t.name || '?').charAt(0).toUpperCase())}</span>
-        <span class="quote__who">
-          <b>${esc(t.name || 'Anonymous')}</b>
-          ${t.role ? `<small>${esc(t.role)}</small>` : ''}
-        </span>
-      </footer>
-      ${isLocal ? `<button class="quote__del" data-del="${i}" type="button"
-        aria-label="Delete this note"><svg><use href="#i-close"/></svg></button>` : ''}
-    </blockquote>`;
-  }).join('');
-
-  $$('#feedbackList [data-del]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const next = loadLocal();
-      next.splice(Number(btn.dataset.del), 1);
-      saveLocal(next);
-      renderFeedback();
-    });
-  });
-
-  observeReveals();
-}
-
-function wireFeedbackForm() {
-  let rating = 0;
-  const stars = $$('#fbStars button');
-
-  const paint = (v) => stars.forEach((s, i) => s.classList.toggle('on', i < v));
-  stars.forEach((s) => {
-    s.addEventListener('click', () => { rating = Number(s.dataset.v); paint(rating); });
-    s.addEventListener('pointerenter', () => paint(Number(s.dataset.v)));
-  });
-  $('#fbStars').addEventListener('pointerleave', () => paint(rating));
-
-  $('#feedbackForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = $('#fbName').value.trim();
-    const role = $('#fbRole').value.trim();
-    const quote = $('#fbMsg').value.trim();
-    const note = $('#fbNote');
-
-    $('#fbName').closest('.field').classList.toggle('err', !name);
-    $('#fbMsg').closest('.field').classList.toggle('err', !quote);
-
-    if (!name || !quote) {
-      note.textContent = 'Please add your name and a short message.';
-      note.className = 'form-note bad';
-      return;
-    }
-
-    const list = loadLocal();
-    list.unshift({ name, role, quote, rating, at: Date.now() });
-    saveLocal(list);
-
-    e.target.reset();
-    rating = 0; paint(0);
-    note.textContent = 'Thanks — posted. It lives in this browser only.';
-    note.className = 'form-note ok';
-    renderFeedback();
-  });
 }
 
 /* ── Contact ──────────────────────────────────────────────────────────── */
@@ -509,9 +436,7 @@ export function initUI({ onSection, openChat } = {}) {
   renderProjects();
   renderWorks();
   renderGallery();
-  renderFeedback();
   renderContact();
-  wireFeedbackForm();
   observeReveals();
 
   typewriter();

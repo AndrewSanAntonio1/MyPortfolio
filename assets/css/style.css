@@ -129,8 +129,11 @@ body.scene-ready #bg { opacity: 1; }
 body.has-pointer .cursor-glow { opacity: 1; }
 
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
-svg { fill: currentColor; }
-.btn svg, .rail svg, li svg, button svg, a svg { width: 1em; height: 1em; flex: none; }
+/* An inline <svg> that has a viewBox but no width/height falls back to the
+   replaced-element default of 300x150px, which detonates any layout it lands
+   in. Default every icon to 1em so a bare <svg> is always safe; the few that
+   need a different size opt out further down (e.g. .brand__mark svg). */
+svg { fill: currentColor; width: 1em; height: 1em; flex: none; }
 
 a { color: var(--mint); text-decoration: none; transition: color .25s var(--ease); }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
@@ -524,6 +527,12 @@ code {
   pointer-events: none;
   transform-origin: left top;
   transition: transform .24s var(--ease), color .24s;
+  /* Absolutely positioned, so a wrapping label would spill over whatever sits
+     below it. Keep it on one line and clip instead. */
+  max-width: calc(100% - 1.9rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .field label em { font-style: normal; opacity: .6; font-size: .85em; }
 .field input:focus, .field textarea:focus {
@@ -743,146 +752,148 @@ code {
   initial-value: 0;
 }
 
+/* ── 07 SKILLS (Horizontal Scrolling) ─────────────────────────────────── */
 .skills {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(286px, 1fr));
-  gap: 1.25rem;
-  align-items: start;
-}
-
-/* Each card carries its own accent — --acc / --acc-line / --acc-bg / --glow
-   and --avg all arrive as inline custom properties from renderSkills(). */
-.skill-card {
-  --acc: var(--mint);
-  position: relative;
-  padding: 1.55rem 1.5rem 1.5rem;
   overflow: hidden;
-  transition: transform .45s var(--ease), border-color .45s var(--ease),
-              box-shadow .45s var(--ease);
-}
-.skill-card:hover {
-  transform: translateY(-6px);
-  border-color: var(--acc-line, var(--line-2));
-  box-shadow: 0 28px 62px -34px rgba(0, 0, 0, .9);
+  position: relative;
+  margin: 2rem 0;
+  padding: 2rem 0;
 }
 
-/* Accent bloom in the corner behind the icon. */
-.skill-card::before {
+.skills-scroll-container {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  -webkit-mask-image: linear-gradient(90deg, 
+    transparent 0%, 
+    black 5%, 
+    black 95%, 
+    transparent 100%
+  );
+  mask-image: linear-gradient(90deg, 
+    transparent 0%, 
+    black 5%, 
+    black 95%, 
+    transparent 100%
+  );
+}
+
+.skills-track {
+  display: flex;
+  gap: 1.5rem;
+  width: max-content;
+  animation: scroll-left 60s linear infinite;
+  will-change: transform;
+  padding: 0.5rem 0;
+}
+
+/* Pause animation on hover */
+.skills-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes scroll-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% / 3));
+  }
+}
+
+.skill-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  flex-direction: column;
+  padding: 1.4rem 2rem;
+  background: rgba(5, 7, 15, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s var(--ease);
+  cursor: default;
+  min-width: 200px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.skill-chip::before {
   content: '';
   position: absolute;
-  top: -70px; left: -55px;
-  width: 210px; height: 210px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--glow, transparent), transparent 68%);
-  opacity: .5;
-  transition: opacity .5s var(--ease);
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  height: 120%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at center, var(--glow, transparent), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s var(--ease);
   pointer-events: none;
 }
-.skill-card:hover::before { opacity: 1; }
 
-/* Hairline that lights up along the top edge. */
-.skill-card::after {
+.skill-chip::after {
   content: '';
   position: absolute;
-  inset: -1px -1px auto -1px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--acc), transparent);
+  inset: -1px;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--acc, transparent), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
   opacity: 0;
-  transition: opacity .45s;
-}
-.skill-card:hover::after { opacity: .85; }
-
-.skill-card__head {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: .9rem;
-  padding-bottom: 1.05rem;
-  margin-bottom: 1.15rem;
-  border-bottom: 1px solid var(--line);
+  transition: opacity 0.4s var(--ease);
 }
 
-.skill-card__id { min-width: 0; flex: 1; }
-.skill-card h3 {
-  font-family: var(--display);
-  font-size: .99rem;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -.005em;
-}
-.skill-card__meta {
-  margin-top: .22rem;
-  font-family: var(--mono);
-  font-size: .66rem;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  color: var(--dim);
+.skill-chip:hover {
+  transform: translateY(-6px) scale(1.02);
+  border-color: var(--acc);
+  box-shadow: 0 12px 40px -8px var(--glow), 0 0 0 1px var(--acc);
 }
 
-/* Group average: a conic sweep with the middle masked out, so the glass
-   still shows through the ring. */
-.skill-card__avg {
-  flex: 0 0 auto;
-  margin-inline-start: auto;
-  position: relative;
-  width: 46px; height: 46px;
-  display: grid;
-  place-items: center;
-  font-family: var(--mono);
-  color: var(--acc);
-  line-height: 1;
-}
-.skill-card__avg::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(from -90deg,
-    var(--acc) calc(var(--p) * 1%), rgba(255, 255, 255, .08) 0);
-  -webkit-mask: radial-gradient(farthest-side, transparent 62%, #000 64%);
-          mask: radial-gradient(farthest-side, transparent 62%, #000 64%);
-  transition: --p 1.3s var(--ease) .2s;
-}
-.skill-card.in .skill-card__avg::before { --p: var(--avg, 0); }
-.skill-card__avg b { font-size: .74rem; font-weight: 600; }
-.skill-card__avg i { font-size: .56rem; font-style: normal; color: var(--dim); }
-
-.skill-rows { display: grid; gap: .88rem; }
-
-.skill-row__top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: .6rem;
-  font-size: .845rem;
-  margin-bottom: .44rem;
-}
-.skill-row__top span { color: var(--muted); transition: color .35s var(--ease); }
-.skill-card:hover .skill-row__top span { color: var(--text); }
-.skill-row__top i {
-  font-family: var(--mono);
-  font-style: normal;
-  font-size: .72rem;
-  color: var(--dim);
-  font-variant-numeric: tabular-nums;
+.skill-chip:hover::before {
+  opacity: 0.5;
 }
 
-/* Segmented meter. The track paints unlit notches and the fill paints lit ones
-   on the same 7px grid from the same left edge, so the two always line up. */
-.bar {
-  height: 9px;
-  background: repeating-linear-gradient(90deg,
-    rgba(255, 255, 255, .075) 0 4px, transparent 4px 7px);
+.skill-chip:hover::after {
+  opacity: 1;
 }
-.bar i {
+
+.skill-chip__name {
   display: block;
-  height: 100%;
-  width: 0;
-  background: repeating-linear-gradient(90deg,
-    var(--acc) 0 4px, transparent 4px 7px);
-  filter: drop-shadow(0 0 5px var(--acc-line, transparent));
-  transition: width 1.2s var(--ease);
-  transition-delay: calc(var(--i, 0) * 85ms);
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.skill-chip__group {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--acc);
+  opacity: 0.85;
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skills-track {
+    animation: none;
+  }
+  .skill-chip {
+    transition: none;
+  }
 }
 
 /* ── 08 PROJECTS ───────────────────────────────────────────────────────── */
@@ -1116,11 +1127,15 @@ code {
 /* ── 11 FEEDBACK ───────────────────────────────────────────────────────── */
 .feedback {
   display: grid;
-  grid-template-columns: .9fr 1.1fr;
+  grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
   gap: clamp(1.5rem, 3.5vw, 2.8rem);
   align-items: start;
 }
-.feedback__form { padding: 1.7rem 1.6rem; }
+.feedback__form {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.7rem 1.6rem;
+}
 .feedback__title { font-family: var(--display); font-size: 1.1rem; margin-bottom: .3rem; }
 .feedback__hint { font-size: .8rem; color: var(--dim); margin-bottom: 1.4rem; }
 
@@ -1143,18 +1158,76 @@ code {
   font-size: 1.32rem;
   color: rgba(255, 255, 255, .16);
   transition: transform .22s var(--ease), color .22s;
+  padding: .4rem;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  outline-offset: 2px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
-.stars button:hover { transform: scale(1.18) rotate(-8deg); }
+.stars button:hover { transform: scale(1.18) rotate(-8deg); color: rgba(255, 255, 255, .35); }
+.stars button:focus-visible { outline: 2px solid var(--mint); }
 .stars button.on { color: var(--amber); }
 
-.feedback__list { display: grid; gap: 1rem; }
-.quote {
-  padding: 1.4rem 1.4rem 1.2rem;
-  position: relative;
+.feedback__list {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+  align-items: start;
+  align-content: start;
 }
-.quote__rate { display: flex; gap: .15rem; color: var(--amber); font-size: .82rem; margin-bottom: .7rem; }
-.quote p { color: var(--text); font-size: .95rem; margin-bottom: 1rem; }
-.quote footer { display: flex; align-items: center; gap: .7rem; }
+.quote {
+  display: grid;
+  gap: .8rem;
+  padding: 1.3rem 1.3rem 1.1rem;
+  position: relative;
+  min-width: 0;          /* let the card shrink instead of widening the grid */
+}
+.quote__top {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  flex-wrap: wrap;
+  padding-inline-end: 2.2rem;   /* keeps text clear of the delete button */
+}
+.quote__tag {
+  font-size: .8rem;
+  letter-spacing: .04em;
+  color: var(--mint);
+  font-weight: 700;
+  margin-inline-end: auto;      /* rating sits right, but stays adjacent */
+}
+.quote__rate {
+  display: flex;
+  align-items: center;
+  gap: .16rem;
+  flex: none;
+  font-size: .95rem;            /* the stars are 1em, so this sizes them */
+  line-height: 1;
+  color: var(--amber);
+  filter: drop-shadow(0 0 8px rgba(255, 196, 86, .45));
+}
+.quote__rate svg { width: 1em; height: 1em; display: block; flex: none; }
+
+.quote p {
+  color: var(--text);
+  font-size: .95rem;
+  line-height: 1.6;
+  margin: 0;
+  min-width: 0;
+  /* A 400-character URL with no spaces must not stretch the card. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.quote footer {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding-top: .1rem;
+  min-width: 0;
+}
 .quote__av {
   display: grid;
   place-items: center;
@@ -1166,18 +1239,54 @@ code {
   font-size: .85rem;
   flex: none;
 }
+.quote__who {
+  display: grid;
+  gap: .12rem;
+  min-width: 0;
+}
 .quote__who b { display: block; font-size: .88rem; font-weight: 600; }
 .quote__who small { color: var(--dim); font-size: .76rem; }
+.quote__who b, .quote__who small { overflow-wrap: anywhere; }
+
 .quote__del {
   position: absolute;
-  top: .9rem; right: .9rem;
+  top: .6rem; right: .6rem;
+  width: 34px; height: 34px;      /* real tap target, not a 12px glyph */
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
   color: var(--dim);
   font-size: .85rem;
+  cursor: pointer;
   opacity: 0;
-  transition: opacity .3s, color .3s;
+  transition: opacity .3s, color .3s, background .3s;
 }
-.quote:hover .quote__del { opacity: 1; }
-.quote__del:hover { color: var(--rose); }
+.quote:hover .quote__del,
+.quote:focus-within .quote__del,
+.quote__del:focus-visible { opacity: 1; }
+.quote__del:hover { color: var(--rose); background: rgba(255, 123, 146, .12); }
+.quote__del:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+/* Touch screens never hover, so hover-only delete is unreachable there. */
+@media (hover: none) {
+  .quote__del { opacity: .75; }
+}
+
+/* A just-posted note pulses once so the eye lands on it. Runs on ::after so it
+   never fights the .reveal.in entrance animation for the animation property. */
+.quote--new::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: quoteRing 1.2s var(--ease) both;
+}
+@keyframes quoteRing {
+  from { box-shadow: 0 0 0 0 rgba(100, 255, 218, .5),  0 0 26px 2px rgba(100, 255, 218, .3); }
+  to   { box-shadow: 0 0 0 14px rgba(100, 255, 218, 0), 0 0 26px 2px rgba(100, 255, 218, 0); }
+}
 
 .empty {
   padding: 2.4rem 1.5rem;
@@ -1186,7 +1295,30 @@ code {
   border-radius: var(--radius);
   color: var(--dim);
   font-size: .9rem;
+  display: grid;
+  justify-items: center;
+  gap: .4rem;
 }
+.empty svg { width: 1.7rem; height: 1.7rem; color: var(--amber); opacity: .5; }
+.empty b {
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.empty p { margin: 0; max-width: 34ch; }
+
+/* Live character budget under the feedback textarea. */
+.field__count {
+  display: block;
+  margin-top: .35rem;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.field__count.near { color: var(--amber); }
 
 /* ── 12 CONTACT & FOOTER ───────────────────────────────────────────────── */
 .contact {
@@ -1506,6 +1638,7 @@ code {
 
 @media (max-width: 1024px) {
   .about, .feedback, .contact { grid-template-columns: 1fr; }
+  .feedback__form { max-width: none; }
   .about__card { position: static; }
   .nav__links a { padding: .5rem .6rem; font-size: .83rem; }
 }
@@ -1544,6 +1677,12 @@ code {
   .tile.wide { grid-column: span 2; }
   .tile.tall { grid-row: span 1; }
   .hero__cta .btn { flex: 1 1 auto; justify-content: center; }
+  .feedback { gap: 1rem; }
+  .feedback__form { padding: 1.2rem 1rem; }
+  .feedback__list { gap: .75rem; }
+  .quote { padding: 1rem 1rem .9rem; }
+  .quote__tag { font-size: .74rem; }
+  .quote__rate { font-size: .88rem; }
   .scroll-cue { display: none; }
   .about__body p:first-child::first-letter { font-size: 2.6rem; }
   .footer__inner { flex-direction: column; text-align: center; }
